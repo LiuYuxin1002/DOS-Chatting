@@ -1,9 +1,13 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class Server {
     public static Map<String, User> userMap = new HashMap<>();//we needn't to sort them
@@ -26,8 +30,9 @@ public class Server {
             System.out.println(userClient.getPort()+" is connected.");
             //get userId
             PrintWriter out = new PrintWriter(userClient.getOutputStream(), true);
-            BufferedReader nameBuffer = new BufferedReader(new InputStreamReader(userClient.getInputStream()));
-            out.println("INPUT YOUR ID---");
+            BufferedReader nameBuffer = new BufferedReader(
+                    new InputStreamReader(userClient.getInputStream(), StandardCharsets.UTF_8));
+            out.println("INPUT YOUR ID---请输入昵称：");
             String name = nameBuffer.readLine();
             //add user to userMap
             User user = new User(userClient, name);
@@ -96,16 +101,14 @@ class User implements Runnable{//********remember to change these field to priva
         //transport msg
         out2 = new PrintWriter(friendSocket.getOutputStream(), true);
         //get ORDER or MSG
-        in1 = new BufferedReader(new InputStreamReader(client.getInputStream()));
+        in1 = new BufferedReader(
+                new InputStreamReader(client.getInputStream(),"utf-8"));
         changeFriend();
 
         String line = null;
         while((line = in1.readLine())!=null){
             if(line.equals("#886")){
-                //tell you friend you are offline
-                out2.println(LocalDate.now().toString()+" USER "+ myName+" IS OFFLINE");
-                client.close();
-                Server.userMap.remove(myName);
+                deleteUser();
                 break;
             }
             else if(line.equals("#change")){
@@ -119,6 +122,13 @@ class User implements Runnable{//********remember to change these field to priva
         }
     }
 
+    private void deleteUser() throws IOException {
+        //tell you friend you are offline
+        out2.println(LocalDate.now().toString()+" USER "+ myName+" IS OFFLINE");
+        client.close();
+        Server.userMap.remove(myName);
+    }
+
     private void changeFriend() throws IOException {
         //ask him which user he want to chat
         out1.println("WHO TO CHAT?");
@@ -126,6 +136,7 @@ class User implements Runnable{//********remember to change these field to priva
         //read from him
         String name = in1.readLine();
         while(!selectFriend(name)){
+            if(name.equals("#886")) deleteUser();
             out1.println("CAN NOT FIND YOUR FRIEND OR HE(SHE) IS OFFLINE, PLEASE RETEST!");
             name = in1.readLine();
         }

@@ -1,9 +1,7 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class Client {
     static String ServerIP = "localhost";
@@ -25,7 +23,8 @@ class RecvThread implements Runnable{
 
     public RecvThread(Socket client) throws IOException {
         this.client = client;
-        inServer = new BufferedReader(new InputStreamReader(client.getInputStream()));
+        inServer = new BufferedReader(
+                new InputStreamReader(client.getInputStream(),StandardCharsets.UTF_8));
     }
     @Override
     public void run() {
@@ -45,13 +44,13 @@ class RecvThread implements Runnable{
 }
 
 class SendThread implements Runnable{
-    PrintStream out;
+    PrintWriter out;
     BufferedReader inTerminal;
     Socket client;
 
     public SendThread(Socket client) throws IOException {
         this.client = client;
-        out = new PrintStream(client.getOutputStream(), true);
+        out = new PrintWriter(client.getOutputStream(), true);
         //msg read from terminal
         inTerminal = new BufferedReader(new InputStreamReader(System.in));
     }
@@ -70,8 +69,9 @@ class SendThread implements Runnable{
         while((line=inTerminal.readLine())!=null){
             out.println(line);
             if(line.equals("#886")) break;
-//            System.out.println("send success");
         }
+
+        out.close();
         client.close();
     }
 }
